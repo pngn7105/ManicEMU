@@ -37,12 +37,23 @@ jobs:
         with:
           xcode-version: "26.4"
 
-      - name: 4. Compile Release Build
+      - name: 4. Install build dependencies
+        run: |
+          set -euxo pipefail
+          brew update
+          brew install boost
+          if brew info --cask vulkan-sdk >/dev/null 2>&1; then
+            brew install --cask vulkan-sdk
+          else
+            brew install vulkan-sdk || true
+          fi
+
+      - name: 5. Compile Release Build
         run: |
           xcodebuild \
             -project ManicEmu/ManicEmu.xcodeproj \
             -scheme "ManicEmuRelease" \
-            -configuration Release \
+            -configuration SideloadRelease \
             -derivedDataPath "$RUNNER_TEMP/ManicEmuDerivedData" \
             -destination "generic/platform=iOS" \
             -skipPackagePluginValidation \
@@ -53,10 +64,10 @@ jobs:
             PROVISIONING_PROFILE_SPECIFIER="" \
             clean build
 
-      - name: 5. Package .app into .ipa
+      - name: 6. Package .app into .ipa
         env:
           APP_PATH: ${{ runner.temp }}/ManicEmuDerivedData/Build/Products/Release-iphoneos/ManicEmu.app
-          IPA_PATH: ${{ runner.temp }}/ManicEmuRelease.ipa
+          IPA_PATH: ${{ runner.temp }}/ManicEmuSideloadRelease.ipa
         run: |
           test -d "$APP_PATH"
           mkdir -p "$RUNNER_TEMP/Payload"
@@ -64,11 +75,11 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent \
             "$RUNNER_TEMP/Payload" "$IPA_PATH"
 
-      - name: 6. Store IPA as Workflow Artifact
+      - name: 7. Store IPA as Workflow Artifact
         if: env.UPLOAD_IPA == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: ManicEmu-Release.ipa
-          path: ${{ runner.temp }}/ManicEmuRelease.ipa
+          name: ManicEmu-SideloadRelease.ipa
+          path: ${{ runner.temp }}/ManicEmuSideloadRelease.ipa
           retention-days: 90
           if-no-files-found: error
