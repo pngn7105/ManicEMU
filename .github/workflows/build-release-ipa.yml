@@ -1,4 +1,4 @@
-name: Build Release IPA
+name: Build Rit faelease IPA
 
 on:
   push:
@@ -44,13 +44,37 @@ jobs:
           brew install boost
 
       - name: 4.1 Install Vulkan SDK via VulkanCI Action
+        id: vulkanci
         uses: NcStudios/VulkanCI@v1.0
+        continue-on-error: true
         with:
           # VulkanSDK version to use (must be supported)
           sdkVersion: 1.4.309.0
 
           # Optional path to installation path (example: 'myArtifacts')
           installPath: 'myArtifacts'
+
+      - name: 4.2 VulkanCI fallback: log runner info and try manual install
+        if: ${{ steps.vulkanci.outcome != 'success' }}
+        run: |
+          echo "VulkanCI action failed; logging runner info and attempting manual install"
+          uname -a || true
+          sw_vers || true
+          echo "Listing workspace and temp dirs for debugging:"
+          ls -la "$GITHUB_WORKSPACE" || true
+          ls -la "$RUNNER_TEMP" || true
+          git clone --depth 1 https://github.com/NcStudios/VulkanCI.git "$RUNNER_TEMP/VulkanCI"
+          if [ -f "$RUNNER_TEMP/VulkanCI/ci/vulkansdk-macos.sh" ]; then
+            bash "$RUNNER_TEMP/VulkanCI/ci/vulkansdk-macos.sh" 1.4.309.0
+          elif [ -f "$RUNNER_TEMP/VulkanCI/install.sh" ]; then
+            bash "$RUNNER_TEMP/VulkanCI/install.sh" 1.4.309.0
+          elif [ -f "$RUNNER_TEMP/VulkanCI/scripts/install_vulkansdk.sh" ]; then
+            bash "$RUNNER_TEMP/VulkanCI/scripts/install_vulkansdk.sh" 1.4.309.0
+          else
+            echo "Manual installer not found; listing repo for debug:"
+            ls -la "$RUNNER_TEMP/VulkanCI"
+            exit 1
+          fi
 
       - name: 5. Compile Release Build
         run: |
