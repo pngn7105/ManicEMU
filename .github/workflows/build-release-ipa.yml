@@ -42,11 +42,15 @@ jobs:
           set -euxo pipefail
           brew update
           brew install boost
-          if brew info --cask vulkan-sdk >/dev/null 2>&1; then
-            brew install --cask vulkan-sdk
-          else
-            brew install vulkan-sdk || true
-          fi
+
+      - name: 4.1 Install Vulkan SDK via VulkanCI Action
+        uses: NcStudios/VulkanCI@v1.0
+        with:
+          # VulkanSDK version to use (must be supported)
+          sdkVersion: 1.4.309.0
+
+          # Optional path to installation path (example: 'myArtifacts')
+          installPath: 'myArtifacts'
 
       - name: 5. Compile Release Build
         run: |
