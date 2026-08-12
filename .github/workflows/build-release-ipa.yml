@@ -13,7 +13,7 @@ permissions:
 jobs:
   build:
     name: Build IPA
-    runs-on: macos-latest
+    runs-on: macos-15
     env:
       UPLOAD_IPA: ${{ vars.UPLOAD_IPA || 'true' }}
 
@@ -35,7 +35,7 @@ jobs:
       - name: 3. Configure Xcode Environment
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: "26.4"
+          xcode-version: "26.2"
 
       - name: 4. Install build dependencies
         run: |
@@ -44,37 +44,10 @@ jobs:
           brew install boost
 
       - name: 4.1 Install Vulkan SDK via VulkanCI Action
-        id: vulkanci
-        uses: NcStudios/VulkanCI@v1.0
-        continue-on-error: true
+        uses: NcStudios/VulkanCI@v1.3
         with:
-          # VulkanSDK version to use (must be supported)
-          sdkVersion: 1.4.309.0
-
-          # Optional path to installation path (example: 'myArtifacts')
-          installPath: 'myArtifacts'
-
-      - name: 4.2 VulkanCI fallback: log runner info and try manual install
-        if: ${{ steps.vulkanci.outcome != 'success' }}
-        run: |
-          echo "VulkanCI action failed; logging runner info and attempting manual install"
-          uname -a || true
-          sw_vers || true
-          echo "Listing workspace and temp dirs for debugging:"
-          ls -la "$GITHUB_WORKSPACE" || true
-          ls -la "$RUNNER_TEMP" || true
-          git clone --depth 1 https://github.com/NcStudios/VulkanCI.git "$RUNNER_TEMP/VulkanCI"
-          if [ -f "$RUNNER_TEMP/VulkanCI/ci/vulkansdk-macos.sh" ]; then
-            bash "$RUNNER_TEMP/VulkanCI/ci/vulkansdk-macos.sh" 1.4.309.0
-          elif [ -f "$RUNNER_TEMP/VulkanCI/install.sh" ]; then
-            bash "$RUNNER_TEMP/VulkanCI/install.sh" 1.4.309.0
-          elif [ -f "$RUNNER_TEMP/VulkanCI/scripts/install_vulkansdk.sh" ]; then
-            bash "$RUNNER_TEMP/VulkanCI/scripts/install_vulkansdk.sh" 1.4.309.0
-          else
-            echo "Manual installer not found; listing repo for debug:"
-            ls -la "$RUNNER_TEMP/VulkanCI"
-            exit 1
-          fi
+          sdkVersion: "1.4.309.0"
+          installPath: ${{ github.workspace }}
 
       - name: 5. Compile Release Build
         run: |
@@ -94,8 +67,8 @@ jobs:
 
       - name: 6. Package .app into .ipa
         env:
-          APP_PATH: ${{ runner.temp }}/ManicEmuDerivedData/Build/Products/Release-iphoneos/ManicEmu.app
-          IPA_PATH: ${{ runner.temp }}/ManicEmuSideloadRelease.ipa
+          APP_PATH: ${{ runner.temp }}/ManicEmuDerivedData/Build/Products/SideloadRelease-iphoneos/ManicEmu.app
+          IPA_PATH: ${{ runner.temp }}/ManicEmuRelease.ipa
         run: |
           test -d "$APP_PATH"
           mkdir -p "$RUNNER_TEMP/Payload"
@@ -108,6 +81,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ManicEmu-SideloadRelease.ipa
-          path: ${{ runner.temp }}/ManicEmuSideloadRelease.ipa
+          path: ${{ runner.temp }}/ManicEmuRelease.ipa
           retention-days: 90
           if-no-files-found: error
