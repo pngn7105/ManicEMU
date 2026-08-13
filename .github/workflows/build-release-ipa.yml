@@ -37,11 +37,19 @@ jobs:
         with:
           xcode-version: "26.4"
 
-      - name: 4. Install build dependencies
+      - name: 4.1 Install Boost
         run: |
           set -euxo pipefail
           brew update
           brew install boost
+
+      - name: 4.2 Install VulkanSDK
+      - uses: NcStudios/VulkanCI@v1.2
+        with:
+    # VulkanSDK version to use
+    # Must be a supported version
+    # The default value is 1.4.309.0
+        sdkVersion: 1.4.309.0
 
       - name: 5. Compile Release Build
         run: |
