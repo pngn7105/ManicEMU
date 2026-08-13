@@ -1,4 +1,4 @@
-name: Build Rit faelease IPA
+name: Build Release IPA
 
 on:
   push:
